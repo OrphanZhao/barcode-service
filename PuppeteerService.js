@@ -14,7 +14,7 @@ class PuppeteerService {
   async initialize() {
     if (!this.browser) {
       try {
-        this.browser = await puppeteer.launch({ headless: false });
+        this.browser = await puppeteer.launch({ headless: true });
         this.page = await this.browser.newPage();
         this.page.setDefaultNavigationTimeout(60000); // 60秒
         await this.page.goto("https://www.gds.org.cn/#/home/index", {
