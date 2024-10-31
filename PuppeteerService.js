@@ -43,7 +43,7 @@ class PuppeteerService {
         const { gtin, base_id } = target;
 
         const infoResponse = await this.fetchProductInfo(base_id, gtin, token);
-        return infoResponse;
+        return { listResponse, infoResponse };
       } else {
         throw new Error("No items found");
       }
