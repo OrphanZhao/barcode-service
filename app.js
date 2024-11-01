@@ -2,12 +2,12 @@ const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
 const puppeteer = require("puppeteer");
-const logger = require("./logger");
 
 dotenv.config();
 const token = process.env.TOKEN;
 const baseUrl = "https://bff.gds.org.cn/gds/searching-api/ProductService";
 const defaultBarcode = 6932203601439;
+const imageBaseUrl = "https://oss.gds.org.cn";
 
 const main = async () => {
   const startBrowser = async () => {
@@ -17,7 +17,7 @@ const main = async () => {
     await page.goto("https://www.gds.org.cn/#/home/index", {
       waitUntil: "domcontentloaded",
     });
-    return page;
+    return { browser, page };
   };
 
   const productListByGtin = async (page, barcode = defaultBarcode) => {
@@ -67,32 +67,36 @@ const main = async () => {
   };
 
   const start = async () => {
-    const page = await startBrowser();
+    const { browser, page } = await startBrowser();
 
-    const {
-      Data: { Items },
-    } = await productListByGtin(page);
-    const [target] = Items;
-    const { f_id } = target;
+    try {
+      const {
+        Data: { Items },
+      } = await productListByGtin(page);
+      const [target] = Items;
+      const { f_id } = target;
 
-    const {
-      Data: { Items: all },
-    } = await productListByFid(page, f_id);
+      const {
+        Data: { Items: all },
+      } = await productListByFid(page, f_id);
 
-    for (const item of all) {
-      await new Promise(async (resolve) => {
-        console.log(item);
-        let res = {};
-        try {
-          res = await productInfoByGtin(page, item.gtin, item.base_id);
-        } catch (error) {
-          console.log(error);
-          res = error;
-        }
-        logger.info("productInfoByGtin", { res });
-        setTimeout(resolve, 5000);
-      });
+      const data = all.map((v) => ({
+        code: v.gtin,
+        title: v.description,
+        spec: v.specification,
+        imageUrl: v.picture_filename
+          ? `${imageBaseUrl}${v.picture_filename}`
+          : null,
+      }));
+
+      const logFilePath = path.join(__dirname, "barcode.json");
+      const jsonData = JSON.stringify(data, null, 2);
+      fs.writeFileSync(logFilePath, jsonData, "utf8");
+    } catch (error) {
+      console.log(error);
     }
+
+    browser.close();
   };
   start();
 };
